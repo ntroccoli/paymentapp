@@ -5,6 +5,7 @@ import com.nelsontr.paymentapp.mapper.PaymentMapper;
 import com.nelsontr.paymentapp.model.Payment;
 import com.nelsontr.paymentapp.repository.PaymentRepository;
 import jakarta.validation.Valid;
+import lombok.Getter;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -13,11 +14,12 @@ import java.util.Optional;
 public class PaymentService {
 
     private final PaymentRepository paymentRepository;
-
+    private final WebhookService webhookService;
     private final CardEncryptionService cardEncryptionService;
 
-    public PaymentService(PaymentRepository paymentRepository, CardEncryptionService cardEncryptionService) {
+    public PaymentService(PaymentRepository paymentRepository, WebhookService webhookService, CardEncryptionService cardEncryptionService) {
         this.paymentRepository = paymentRepository;
+        this.webhookService = webhookService;
         this.cardEncryptionService = cardEncryptionService;
     }
 
@@ -33,7 +35,9 @@ public class PaymentService {
         }
         String encryptedCardNumber = cardEncryptionService.encryptCardNumber(request.getCardNumber());
         Payment payment = PaymentMapper.mapToEntity(request, encryptedCardNumber);
+
         Payment saved = paymentRepository.save(payment);
+        webhookService.notifyWebhooks(saved);
         return new CreatePaymentResult(saved, true);
     }
 
@@ -45,6 +49,7 @@ public class PaymentService {
         return paymentRepository.findById(transactionId);
     }
 
+    @Getter
     public static class CreatePaymentResult {
         private final Payment payment;
         private final boolean created;
@@ -54,12 +59,6 @@ public class PaymentService {
             this.created = created;
         }
 
-        public Payment getPayment() {
-            return payment;
-        }
-
-        public boolean isCreated() {
-            return created;
-        }
     }
+
 }

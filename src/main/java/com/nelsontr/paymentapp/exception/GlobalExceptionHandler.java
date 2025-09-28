@@ -66,6 +66,14 @@ public class GlobalExceptionHandler {
         return pd;
     }
 
+    @ExceptionHandler(WebhookAlreadyExistsException.class)
+    public ProblemDetail handleWebhookConflict(WebhookAlreadyExistsException ex) {
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+        pd.setType(ProblemType.RESOURCE_CONFLICT);
+        pd.setTitle("Conflict");
+        return pd;
+    }
+
     @ExceptionHandler(Exception.class)
     public ProblemDetail handleGeneric(Exception ex) {
         ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error");

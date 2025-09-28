@@ -14,5 +14,5 @@ public final class ProblemType {
     public static final URI CONSTRAINT_VIOLATION = URI.create("urn:paymentapp:problem:constraint-violation");
     public static final URI MALFORMED_JSON = URI.create("urn:paymentapp:problem:malformed-json");
     public static final URI INTERNAL_ERROR = URI.create("urn:paymentapp:problem:internal-error");
+    public static final URI RESOURCE_CONFLICT = URI.create("urn:paymentapp:problem:resource-conflict");
 }
-

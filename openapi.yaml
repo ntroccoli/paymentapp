@@ -10,9 +10,115 @@ servers:
 - url: http://localhost:8080
   description: Generated server url
 tags:
+- name: Webhooks
+  description: Manage webhook subscriptions and receive callbacks
 - name: Payments
   description: Create and query payment transactions
 paths:
+  /webhooks:
+    post:
+      tags:
+      - Webhooks
+      summary: Register a webhook URL
+      description: Registers a new webhook target URL that will receive payment update
+        callbacks.
+      operationId: registerWebhook
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookRequestDto"
+            examples:
+              Sample request:
+                description: Sample request
+                value:
+                  url: http://localhost:8080/webhooks/receiver
+        required: true
+      responses:
+        "201":
+          description: Webhook registered successfully
+          headers:
+            Location:
+              description: URI of the created webhook resource
+              style: simple
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookResponseDto"
+              examples:
+                Created:
+                  description: Created
+                  value:
+                    id: 1
+                    url: http://localhost:8080/webhooks/receiver
+        "400":
+          description: Validation error or malformed JSON
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+              examples:
+                Blank url:
+                  description: Blank url
+                  value:
+                    type: urn:paymentapp:problem:validation-error
+                    title: Bad Request
+                    status: 400
+                    detail: Validation failed for request body
+                    errors:
+                      url:
+                      - must not be blank
+                Malformed JSON:
+                  description: Malformed JSON
+                  value:
+                    type: urn:paymentapp:problem:malformed-json
+                    title: Bad Request
+                    status: 400
+                    detail: Malformed JSON request
+        "409":
+          description: Webhook with the given URL already exists
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+              examples:
+                Conflict:
+                  description: Conflict
+                  value:
+                    type: urn:paymentapp:problem:resource-conflict
+                    title: Conflict
+                    status: 409
+                    detail: Webhook with the given URL already exists
+        "500":
+          description: Unexpected server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+  /webhooks/receiver:
+    post:
+      tags:
+      - Webhooks
+      summary: Receive a webhook callback (loopback for local testing)
+      description: This endpoint can be used as a local webhook receiver during development.
+        It accepts the same payload sent by the webhook notifications (PaymentResponse).
+      operationId: receiveLocalWebhook
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentResponse"
+            examples:
+              Sample callback:
+                description: Sample callback
+                value:
+                  transactionId: 1001
+                  orderNumber: ORD-2025-000123
+                  status: PENDING
+        required: true
+      responses:
+        "200":
+          description: Callback received
   /payments:
     get:
       tags:
@@ -54,7 +160,8 @@ paths:
       tags:
       - Payments
       summary: Create a payment
-      description: "Creates a new payment. If a payment with the same orderNumber exists, the existing one is returned (idempotent)."
+      description: "Creates a new payment. If a payment with the same orderNumber\
+        \ exists, the existing one is returned (idempotent)."
       operationId: createPayment
       requestBody:
         content:
@@ -151,6 +258,62 @@ paths:
                 $ref: "#/components/schemas/ProblemDetail"
 components:
   schemas:
+    WebhookRequestDto:
+      type: object
+      properties:
+        url:
+          type: string
+          minLength: 1
+      required:
+      - url
+    WebhookResponseDto:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        url:
+          type: string
+    ProblemDetail:
+      type: object
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+          format: int32
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri
+        properties:
+          type: object
+          additionalProperties: {}
+    PaymentResponse:
+      type: object
+      description: Response returned after creating or querying a payment
+      properties:
+        transactionId:
+          type: integer
+          format: int64
+          description: Unique transaction identifier
+          example: 1001
+        orderNumber:
+          type: string
+          description: Order number used as an idempotency key
+          example: ORD-2025-000123
+        status:
+          type: string
+          description: Current status of the payment
+          enum:
+          - PENDING
+          - APPROVED
+          - DECLINED
+          example: PENDING
     PaymentRequest:
       type: object
       description: Request payload to create a payment
@@ -188,43 +351,3 @@ components:
       - lastName
       - orderNumber
       - zipCode
-    PaymentResponse:
-      type: object
-      description: Response returned after creating or querying a payment
-      properties:
-        transactionId:
-          type: integer
-          format: int64
-          description: Unique transaction identifier
-          example: 1001
-        orderNumber:
-          type: string
-          description: Order number used as an idempotency key
-          example: ORD-2025-000123
-        status:
-          type: string
-          description: Current status of the payment
-          enum:
-          - PENDING
-          - APPROVED
-          - DECLINED
-          example: PENDING
-    ProblemDetail:
-      type: object
-      properties:
-        type:
-          type: string
-          format: uri
-        title:
-          type: string
-        status:
-          type: integer
-          format: int32
-        detail:
-          type: string
-        instance:
-          type: string
-          format: uri
-        properties:
-          type: object
-          additionalProperties: {}

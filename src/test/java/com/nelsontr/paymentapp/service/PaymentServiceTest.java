@@ -26,6 +26,9 @@ class PaymentServiceTest {
     @Mock
     private CardEncryptionService cardEncryptionService;
 
+    @Mock
+    private WebhookService webhookService;
+
     @InjectMocks
     private PaymentService paymentService;
 
@@ -55,6 +58,7 @@ class PaymentServiceTest {
         assertThat(result.getPayment()).isSameAs(existing);
         verify(paymentRepository, never()).save(any());
         verifyNoInteractions(cardEncryptionService);
+        verifyNoInteractions(webhookService);
     }
 
     @Test
@@ -84,6 +88,7 @@ class PaymentServiceTest {
 
         verify(cardEncryptionService).encryptCardNumber("4111111111111111");
         verify(paymentRepository).save(any(Payment.class));
+        verify(webhookService).notifyWebhooks(saved);
     }
 
     @Test
@@ -100,4 +105,3 @@ class PaymentServiceTest {
         verify(paymentRepository).findById(42L);
     }
 }
-
