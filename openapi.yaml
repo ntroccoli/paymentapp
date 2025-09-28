@@ -1,0 +1,230 @@
+openapi: 3.1.0
+info:
+  title: Payment API
+  description: Create and query payment transactions
+  contact:
+    name: Support
+    email: support@example.com
+  version: v1
+servers:
+- url: http://localhost:8080
+  description: Generated server url
+tags:
+- name: Payments
+  description: Create and query payment transactions
+paths:
+  /payments:
+    get:
+      tags:
+      - Payments
+      summary: Get payment by order number
+      description: Returns the payment for the given orderNumber if it exists.
+      operationId: getPaymentByOrderNumber
+      parameters:
+      - name: orderNumber
+        in: query
+        description: Order number used as an idempotency key
+        required: true
+        schema:
+          type: string
+        example: ORD-2025-000123
+      responses:
+        "200":
+          description: Payment found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentResponse"
+              example:
+                transactionId: 1001
+                orderNumber: ORD-2025-000123
+                status: PENDING
+        "404":
+          description: Payment not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+              example:
+                type: urn:paymentapp:problem:resource-not-found
+                title: Not Found
+                status: 404
+                detail: "Payment not found for orderNumber: ORD-2025-000999"
+    post:
+      tags:
+      - Payments
+      summary: Create a payment
+      description: "Creates a new payment. If a payment with the same orderNumber exists, the existing one is returned (idempotent)."
+      operationId: createPayment
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentRequest"
+            examples:
+              valid:
+                description: valid
+                value:
+                  orderNumber: ORD-2025-000123
+                  firstName: Jane
+                  lastName: Doe
+                  zipCode: "90210"
+                  cardNumber: "4111111111111111"
+        required: true
+      responses:
+        "201":
+          description: Payment created
+          headers:
+            Location:
+              description: URI of the created resource
+              style: simple
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentResponse"
+              examples:
+                created:
+                  description: created
+                  value:
+                    transactionId: 1001
+                    orderNumber: ORD-2025-000123
+                    status: PENDING
+        "200":
+          description: Payment already exists (idempotent)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentResponse"
+              examples:
+                existing:
+                  description: existing
+                  value:
+                    transactionId: 1001
+                    orderNumber: ORD-2025-000123
+                    status: PENDING
+        "400":
+          description: Validation error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+              examples:
+                bad-request:
+                  description: bad-request
+                  value:
+                    type: urn:paymentapp:problem:validation-error
+                    title: Bad Request
+                    status: 400
+                    detail: Validation failed for request body
+                    errors:
+                      zipCode:
+                      - size must be between 5 and 5
+  /payments/{transactionId}:
+    get:
+      tags:
+      - Payments
+      summary: Get payment by transaction id
+      operationId: getPaymentByTransactionId
+      parameters:
+      - name: transactionId
+        in: path
+        description: Unique transaction identifier
+        required: true
+        schema:
+          type: integer
+          format: int64
+        example: 1001
+      responses:
+        "200":
+          description: Payment found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentResponse"
+        "404":
+          description: Payment not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+components:
+  schemas:
+    PaymentRequest:
+      type: object
+      description: Request payload to create a payment
+      properties:
+        orderNumber:
+          type: string
+          description: Order number used as an idempotency key
+          example: ORD-2025-000123
+          minLength: 1
+        firstName:
+          type: string
+          description: Payer's first name
+          example: Jane
+          minLength: 1
+        lastName:
+          type: string
+          description: Payer's last name
+          example: Doe
+          minLength: 1
+        zipCode:
+          type: string
+          description: ZIP/Postal code
+          example: 90210
+          maxLength: 5
+          minLength: 5
+        cardNumber:
+          type: string
+          description: Primary account number (PAN)
+          example: 4111111111111111
+          maxLength: 16
+          minLength: 16
+      required:
+      - cardNumber
+      - firstName
+      - lastName
+      - orderNumber
+      - zipCode
+    PaymentResponse:
+      type: object
+      description: Response returned after creating or querying a payment
+      properties:
+        transactionId:
+          type: integer
+          format: int64
+          description: Unique transaction identifier
+          example: 1001
+        orderNumber:
+          type: string
+          description: Order number used as an idempotency key
+          example: ORD-2025-000123
+        status:
+          type: string
+          description: Current status of the payment
+          enum:
+          - PENDING
+          - APPROVED
+          - DECLINED
+          example: PENDING
+    ProblemDetail:
+      type: object
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+          format: int32
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri
+        properties:
+          type: object
+          additionalProperties: {}
