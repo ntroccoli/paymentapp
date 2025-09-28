@@ -66,3 +66,36 @@ This writes openapi.yaml to the project root and then terminates. You can overri
 - Swagger UI: http://localhost:8080/swagger-ui
 - OpenAPI (JSON): http://localhost:8080/api-docs
 - OpenAPI (YAML): http://localhost:8080/api-docs.yaml
+
+## GitHub Copilot Prompts
+- I'm using org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.13 in this app and I want to update the swagger documentation, and create an OpenAPI Specification and store it with examples at the root of your project, ensuring proper return codes and meaningful information. What is the best way to use that in a Spring Boot 3 application using the best practices and design patterns? No unit tests are needed for this and keep the solution as simple as possible.
+    - Response Plan:
+      - Add clear, rich OpenAPI annotations and stable operationIds.
+      - Define top-level API info (title, version, server).
+      - Use ProblemDetail for errors with examples and meaningful codes.
+      - Add a tiny one-shot exporter profile to write openapi.yaml at the project root.
+      - Verify build and export.
+
+- Implement simple unit tests and integration tests for the app using Spring Boot best practices.
+    - Response: I'll add unit tests for the service, controller, repository, and encryption, plus an end-to-end integration test using MockMvc and H2, then run the Maven test suite to verify everything passes.
+
+- Implement the WebhookService.notifyWebhooks method in order to retrieve the existing webhooks from the database and call them using Resttemplate using a good and simple retry design pattern. Log each of the calls. Create a sample controller method to be initially called as test in this application and update the readme for this scenario. Unit tests and openAPI/Swagger documentation are not necessary now and should be ignored.
+    - Response Planned edits:
+      - Implement WebhookService.notifyWebhooks with RestTemplate POST calls, retry with backoff, and comprehensive logging.
+      - Add @EnableAsync to PaymentappApplication to activate @Async methods.
+      - Add a simple test endpoint in WebhookController to trigger notifications with a sample Payment instance.
+
+- Update the registerWebhook to use a better exception than the IllegalArgumentException to be handled in the GlobalExceptionHandler and update the swagger documentation for the webhook controller with good examples and response status codes.
+    - Response Planned edits:
+        - Add a new exception class WebhookAlreadyExistsException.
+        - Update ProblemType with a RESOURCE_CONFLICT URI.
+        - Add an exception handler for conflict in GlobalExceptionHandler.
+        - Change WebhookService.registerWebhook to throw the new exception.
+        - Enhance Swagger annotations in WebhookController with examples and response codes.
+
+- Create unit tests and integration tests for the webhooks functionality.
+    - Response: I'll scan the repository to locate the webhooks-related code (controllers, services, models) so I can design appropriate unit and integration tests, then implement and run them to verify green.
+
+## License
+This project is licensed under the MIT License.
+
